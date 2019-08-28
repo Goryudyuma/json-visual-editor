@@ -24,20 +24,28 @@ main =
 -- DATA
 
 
-type alias Fruit =
-    String
+type alias Task =
+    { title : String
+    , status : TaskStatus
+    }
 
 
-data : List Fruit
-data =
-    [ "Apples", "Bananas", "Cherries", "Dates" ]
+type TaskStatus
+    = Todo
+    | Doing
+    | Done
+
+
+initialTaskList : List Task
+initialTaskList =
+    [ Task "a" Todo, Task "b" Todo, Task "c" Doing, Task "d" Done ]
 
 
 
 -- SYSTEM
 
 
-config : DnDList.Config Fruit
+config : DnDList.Config Task
 config =
     { beforeUpdate = \_ _ list -> list
     , movement = DnDList.Free
@@ -46,7 +54,7 @@ config =
     }
 
 
-system : DnDList.System Fruit Msg
+system : DnDList.System Task Msg
 system =
     DnDList.create config MyMsg
 
@@ -57,14 +65,14 @@ system =
 
 type alias Model =
     { dnd : DnDList.Model
-    , items : List Fruit
+    , items : List Task
     }
 
 
 initialModel : Model
 initialModel =
     { dnd = system.model
-    , items = data
+    , items = initialTaskList
     }
 
 
@@ -118,19 +126,19 @@ view model =
         ]
 
 
-itemView : DnDList.Model -> Int -> Fruit -> Html.Html Msg
+itemView : DnDList.Model -> Int -> Task -> Html.Html Msg
 itemView dnd index item =
     let
         itemId : String
         itemId =
-            "id-" ++ item
+            "id-" ++ item.title
     in
     case system.info dnd of
         Just { dragIndex } ->
             if dragIndex /= index then
                 Html.p
                     (Html.Attributes.id itemId :: system.dropEvents index itemId)
-                    [ Html.text item ]
+                    [ Html.text item.title ]
 
             else
                 Html.p
@@ -140,13 +148,13 @@ itemView dnd index item =
         Nothing ->
             Html.p
                 (Html.Attributes.id itemId :: system.dragEvents index itemId)
-                [ Html.text item ]
+                [ Html.text item.title ]
 
 
-ghostView : DnDList.Model -> List Fruit -> Html.Html Msg
+ghostView : DnDList.Model -> List Task -> Html.Html Msg
 ghostView dnd items =
     let
-        maybeDragItem : Maybe Fruit
+        maybeDragItem : Maybe Task
         maybeDragItem =
             system.info dnd
                 |> Maybe.andThen (\{ dragIndex } -> items |> List.drop dragIndex |> List.head)
@@ -155,7 +163,7 @@ ghostView dnd items =
         Just item ->
             Html.div
                 (system.ghostStyles dnd)
-                [ Html.text item ]
+                [ Html.text item.title ]
 
         Nothing ->
             Html.text ""
