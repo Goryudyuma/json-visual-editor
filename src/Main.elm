@@ -2,6 +2,7 @@ module Main exposing (main)
 
 import Browser
 import DnDList
+import Element
 import Html
 import Html.Attributes
 
@@ -47,11 +48,36 @@ initialTaskList =
 
 config : DnDList.Config Task
 config =
-    { beforeUpdate = \_ _ list -> list
+    { beforeUpdate = beforeUpdate
     , movement = DnDList.Free
     , listen = DnDList.OnDrag
     , operation = DnDList.Rotate
     }
+
+
+beforeUpdate : Int -> Int -> List Task -> List Task
+beforeUpdate a b list =
+    list
+        |> List.indexedMap Tuple.pair
+        |> List.map
+            (\( id, item ) ->
+                if id == a then
+                    { item
+                        | status =
+                            case b of
+                                0 ->
+                                    Todo
+
+                                1 ->
+                                    Doing
+
+                                _ ->
+                                    Done
+                    }
+
+                else
+                    item
+            )
 
 
 system : DnDList.System Task Msg
@@ -119,15 +145,33 @@ view : Model -> Html.Html Msg
 view model =
     Html.section
         [ Html.Attributes.style "text-align" "center" ]
-        [ model.items
-            |> List.indexedMap (itemView model.dnd)
-            |> Html.div []
+        [ Element.layout [] <|
+            Element.row []
+                [ model.items
+                    |> List.indexedMap Tuple.pair
+                    |> List.filter (\( _, item ) -> item.status == Todo)
+                    |> List.map (itemView model.dnd 0)
+                    |> List.map Element.html
+                    |> Element.column []
+                , model.items
+                    |> List.indexedMap Tuple.pair
+                    |> List.filter (\( _, item ) -> item.status == Doing)
+                    |> List.map (itemView model.dnd 1)
+                    |> List.map Element.html
+                    |> Element.column []
+                , model.items
+                    |> List.indexedMap Tuple.pair
+                    |> List.filter (\( _, item ) -> item.status == Done)
+                    |> List.map (itemView model.dnd 2)
+                    |> List.map Element.html
+                    |> Element.column []
+                ]
         , ghostView model.dnd model.items
         ]
 
 
-itemView : DnDList.Model -> Int -> Task -> Html.Html Msg
-itemView dnd index item =
+itemView : DnDList.Model -> Int -> ( Int, Task ) -> Html.Html Msg
+itemView dnd place ( index, item ) =
     let
         itemId : String
         itemId =
@@ -141,9 +185,7 @@ itemView dnd index item =
                     [ Html.text item.title ]
 
             else
-                Html.p
-                    [ Html.Attributes.id itemId ]
-                    [ Html.text "[---------]" ]
+                Html.text ""
 
         Nothing ->
             Html.p
